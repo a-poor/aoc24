@@ -2,7 +2,6 @@ package main
 
 import (
 	"aoc24"
-	"cmp"
 	"fmt"
 	"log/slog"
 	"regexp"
@@ -22,14 +21,14 @@ func main() {
 
   // Sort the two slices
   slog.Info("Sorting lists")
-  slices.SortFunc(a1, cmpNumber)
-  slices.SortFunc(a2, cmpNumber)
+  slices.Sort(a1)
+  slices.Sort(a2)
 
   // Find the distances
   slog.Info("Calculating distances")
   var d int
   for i := 0; i < len(a1); i++ {
-    d += dist(a1[i].pos, a2[i].pos)
+    d += dist(a1[i], a2[i])
   }
   slog.Info("Done", "answer", d)
 }
@@ -42,18 +41,10 @@ func dist(a, b int) int {
   return d
 }
 
-type number struct {
-  n, pos int
-}
-
-func cmpNumber(a, b number) int {
-  return cmp.Compare(a.n, b.n)
-}
-
-func parseFile(in []byte) ([]number, []number) {
+func parseFile(in []byte) ([]int, []int) {
   // The slices to be returned 
-  var arr1 []number
-  var arr2 []number
+  var arr1 []int
+  var arr2 []int
 
   // Regex for matching the lines
   re := regexp.MustCompile(`(\d+)\s+(\d+)`)
@@ -86,8 +77,8 @@ func parseFile(in []byte) ([]number, []number) {
     }
 
     // Append to the return value
-    arr1 = append(arr1, number{n: n1, pos: i})
-    arr2 = append(arr2, number{n: n2, pos: i})
+    arr1 = append(arr1, n1)
+    arr2 = append(arr2, n2)
   }
 
   // Return the slices
