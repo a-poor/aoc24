@@ -18,11 +18,38 @@ func main() {
     if level == "" {
       continue
     }
-    if isLevelSafe(parseLevel([]byte(level))) {
+    l := parseLevel([]byte(level))
+    if isLevelSafeWithRemoval(l) {
       count++
     }
   }
   slog.Info("Done", "answer", count)
+}
+
+func removeItemFromList(ns []int, i int) []int {
+  ms := make([]int, len(ns)-1)
+  for j, n := range ns {
+    if j < i {
+      ms[j] = n
+    } else if j > i {
+      ms[j-1] = n
+    }
+  }
+  return ms
+}
+
+func isLevelSafeWithRemoval(level []int) bool {
+  // (Not the fastest solution)
+  if isLevelSafe(level) {
+    return true
+  }
+  for i := 0; i < len(level); i++ {
+    l2 := removeItemFromList(level, i)
+    if isLevelSafe(l2) {
+      return true
+    }
+  }
+  return false
 }
 
 func isLevelSafe(level []int) bool {
