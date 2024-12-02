@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log/slog"
 	"regexp"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -20,17 +19,16 @@ func main() {
   a1, a2 := parseFile(in)
 
   // Sort the two slices
-  slog.Info("Sorting lists")
-  slices.Sort(a1)
-  slices.Sort(a2)
+  slog.Info("Counting list 2")
+  cs := toCounts(a2)
 
   // Find the distances
-  slog.Info("Calculating distances")
-  var d int
-  for i := 0; i < len(a1); i++ {
-    d += dist(a1[i], a2[i])
+  slog.Info("Calculating similarity score")
+  var ts int
+  for _, n := range a1 {
+    ts += n * cs[n]
   }
-  slog.Info("Done", "answer", d)
+  slog.Info("Done", "answer", ts)
 }
 
 func dist(a, b int) int {
@@ -83,5 +81,13 @@ func parseFile(in []byte) ([]int, []int) {
 
   // Return the slices
   return arr1, arr2
+}
+
+func toCounts(ns []int) map[int]int {
+  m := make(map[int]int)
+  for _, n := range ns {
+    m[n]++
+  }
+  return m
 }
 
