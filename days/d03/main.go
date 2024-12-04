@@ -15,7 +15,7 @@ var (
 
 func main() {
 	slog.Info("Loading input")
-	in := aoc24.GetInput(3)
+	in := aoc24.GetInput(3, false)
 
 	slog.Info("Processing input")
 	var total int

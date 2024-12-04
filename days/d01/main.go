@@ -12,7 +12,7 @@ import (
 func main() {
 	// Load the input file
 	slog.Info("Loading input")
-	in := aoc24.GetInput(1)
+	in := aoc24.GetInput(1, false)
 
 	// Split it into two lists of integers
 	slog.Info("Parsing input")

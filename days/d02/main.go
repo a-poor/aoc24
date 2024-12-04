@@ -10,7 +10,7 @@ import (
 
 func main() {
 	slog.Info("Loading input")
-	in := aoc24.GetInput(2)
+	in := aoc24.GetInput(2, false)
 
 	slog.Info("Parsing input")
 	var count int
