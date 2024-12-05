@@ -10,8 +10,10 @@ import (
 
 const extraLogs = true
 
+type Direction int
+
 const (
-  Up = 1 << iota
+  Up Direction = 1 << iota
   Down
   Left
   Right
@@ -21,6 +23,8 @@ const (
   DownRight = Down | Right
   DownLeft = Down | Left
 )
+
+var gridSize point
 
 func init() {
   lvl := slog.LevelInfo
@@ -41,45 +45,15 @@ func main() {
 
   slog.Info("Parsing input as a grid")
   grid := gridify(in)
+  gridSize = point{y: len(grid), x: len(grid[0])}
 
-  slog.Info("Counting words")
-  
-  // Keep track of "MAS" centers (aka "A"s) to see if they
-  // come up again later.
-  //
-  // Note: I'm splitting out diagonals and horizontals(aka UDLR)
-  // so I only count perpindicular matches, not oblique matches.
-  dcenters := make(map[point]bool)
-  hcenters := make(map[point]bool)
+  slog.Info("Finding all 'A's in the grid")
+  ps := findMidPoints(grid)
+ 
+  slog.Info("Looking for crosses around each 'A'")
   var total int
-
-  p := findNextStartingPoint(grid, nil)
-  for p != nil {
-    // Look through the new centers
-    hcs, dcs := findCentersOfMas(grid, *p)
-    for _, p := range hcs {
-      // If the center is already in the map,
-      // it's a cross - increment and remove
-      if hcenters[p] {
-        slog.Debug("Found a cross", "point", p)
-        total++
-      } else {
-        hcenters[p] = true
-      }
-    }
-    for _, p := range dcs {
-      // If the center is already in the map,
-      // it's a cross - increment and remove
-      if dcenters[p] {
-        total++
-        slog.Debug("Found a cross", "point", p)
-      } else {
-        dcenters[p] = true
-      }
-    }
-
-    // Move the starting point
-    p = findNextStartingPoint(grid, p)
+  for _, p := range ps { 
+    total += findMatches(grid, p)
   }
 
   slog.Info("Done", "total", total)
@@ -138,140 +112,104 @@ func (p point) DownLeft() point {
   return p.Down().Left()
 }
 
-// findNextStartingPoint returns the next possible starting point
-// for the target word `mas` in the grid, after the given point.
-func findNextStartingPoint(grid [][]rune, after *point) *point {
-  // The size of the grid
-  gw, gh := len(grid[0]), len(grid)
+func (p point) IsPos() bool {
+  return p.x >= 0 && p.y >= 0
+}
 
-  // Pick a starting x/y
-  xstart, ystart := 0, 0
-  if after != nil {
-    xstart = after.x + 1
-    ystart = after.y
-  }
+// In checks if the point is within the bounds
+// of the given other point.
+func (p point) In(o point) bool {
+  return p.IsPos() && p.x < o.x && p.y < o.y
+}
 
-  // Check if we've looped around L/R
-  if xstart >= gw {
-    xstart = 0
-    ystart++
-  }
-
-  // Look for the next possible starting point
-  for i := ystart; i < gh; i++ {
-    xs := xstart
-    if i > ystart {
-      xs = 0
-    }
-    for j := xs; j < gw; j++ {
-      r := grid[i][j]
-      if r == 'M' {
-        return &point{y: i, x: j}
+func findMidPoints(grid [][]rune) []point {
+  var mps []point
+  for i := 0; i < len(grid); i++ {
+    for j := 0; j < len(grid[0]); j++ {
+      if grid[i][j] == 'A' {
+        mps = append(mps, point{y: i, x: j})
       }
     }
   }
-  return nil
+  return mps
 }
 
-// findCentersOfMas returns the center points of the target word
-// `mas` grid, starting from the given startingPoint character.
-func findCentersOfMas(grid [][]rune, startingPoint point) ([]point, []point) {
-  var dcs []point
-  var hcs []point
-  if findRight(grid, startingPoint) {
-    hcs = append(hcs, startingPoint.Right())
-  }
-  if findLeft(grid, startingPoint) {
-    hcs = append(hcs, startingPoint.Left())
-  }
-  if findUp(grid, startingPoint) {
-    hcs = append(hcs, startingPoint.Up())
-  }
-  if findDown(grid, startingPoint) {
-    hcs = append(hcs, startingPoint.Down())
-  }
-  if findUpRight(grid, startingPoint) {
-    dcs = append(dcs, startingPoint.UpRight())
-  }
-  if findUpLeft(grid, startingPoint) {
-    dcs = append(dcs, startingPoint.UpLeft())
-  }
-  if findDownRight(grid, startingPoint) {
-    dcs = append(dcs, startingPoint.DownRight())
-  }
-  if findDownLeft(grid, startingPoint) {
-    dcs = append(dcs, startingPoint.DownLeft())
-  }
-  if n := len(hcs) + len(dcs); n != 0 {
-    slog.Debug("Found centers", "n", n)
-  }
-  return hcs, dcs
-}
-
-func findRight(grid [][]rune, p point) bool {
+func getWord(grid [][]rune, ps ...point) string {
   var word []rune
-  w := len(grid[0])
-  for i := 0; i < len(`mas`) && p.x+i < w; i++ {
-    word = append(word, grid[p.y][p.x+i])
+  for _, p := range ps {
+    if !p.In(gridSize) {
+      continue
+    }
+    word = append(word, grid[p.y][p.x])
   }
-  return string(word) == "MAS"
+  return string(word)
 }
 
-func findLeft(grid [][]rune, p point) bool {
-  var word []rune
-  for i := 0; i < len(`mas`) && p.x-i >= 0; i++ {
-    word = append(word, grid[p.y][p.x-i])
+func findMatches(grid [][]rune, p point) int {
+  matches := make([]Direction, 0)
+  
+  // Check: L  => R
+  if getWord(grid, p.Left(), p, p.Right()) == "MAS" {
+    matches = append(matches, Left)
   }
-  return string(word) == "MAS"
+
+  // Check: R  => L
+  if getWord(grid, p.Right(), p, p.Left()) == "MAS" {
+    matches = append(matches, Right)
+  }
+
+  // Check: U  => D
+  if getWord(grid, p.Up(), p, p.Down()) == "MAS" {
+    matches = append(matches, Up)
+  }
+
+  // Check: D  => U
+  if getWord(grid, p.Down(), p, p.Up()) == "MAS" {
+    matches = append(matches, Down)
+  }
+
+  // Check: UL => DR
+  if getWord(grid, p.UpLeft(), p, p.DownRight()) == "MAS" {
+    matches = append(matches, UpLeft)
+  }
+
+  // Check: DR => UL
+  if getWord(grid, p.DownRight(), p, p.UpLeft()) == "MAS" {
+    matches = append(matches, DownRight)
+  }
+
+  // Check: DL => UR
+  if getWord(grid, p.DownLeft(), p, p.UpRight()) == "MAS" {
+    matches = append(matches, DownLeft)
+  }
+
+  // Check: UR => DL
+  if getWord(grid, p.UpRight(), p, p.DownLeft()) == "MAS" {
+    matches = append(matches, UpRight)
+  }
+
+  var count int
+  for i, a := range matches {
+    for _, b := range matches[i+1:] {
+      if a.IsPerp(b) {
+        count++
+      }
+    }
+  }
+  return count
 }
 
-func findUp(grid [][]rune, p point) bool {
-  var word []rune
-  for i := 0; i < len(`mas`) && p.y-i >= 0; i++ {
-    word = append(word, grid[p.y-i][p.x])
+func (d Direction) IsPerp(o Direction) bool {
+  switch d {
+  case Up, Down:
+    return o == Left || o == Right
+  case Left, Right:
+    return o == Up || o == Down
+  case UpRight, DownLeft:
+    return o == UpLeft || o == DownRight
+  case UpLeft, DownRight:
+    return o == UpRight || o == DownLeft
   }
-  return string(word) == "MAS"
+  panic(fmt.Errorf("Unknown direction: %d", d))
 }
-
-func findDown(grid [][]rune, p point) bool {
-  var word []rune
-  h := len(grid)
-  for i := 0; i < len(`mas`) && p.y+i < h; i++ {
-    word = append(word, grid[p.y+i][p.x])
-  }
-  return string(word) == "MAS"
-}
-
-func findUpRight(grid [][]rune, p point) bool {
-  var word []rune
-  for i := 0; i < len(`mas`) && p.y-i >= 0 && p.x+i < len(grid[0]); i++ {
-    word = append(word, grid[p.y-i][p.x+i])
-  }
-  return string(word) == "MAS"
-}
-
-func findUpLeft(grid [][]rune, p point) bool {
-  var word []rune
-  for i := 0; i < len(`mas`) && p.y-i >= 0 && p.x-i >= 0; i++ {
-    word = append(word, grid[p.y-i][p.x-i])
-  }
-  return string(word) == "MAS"
-}
-
-func findDownRight(grid [][]rune, p point) bool {
-  var word []rune
-  for i := 0; i < len(`mas`) && p.y+i < len(grid) && p.x+i < len(grid[0]); i++ {
-    word = append(word, grid[p.y+i][p.x+i])
-  }
-  return string(word) == "MAS"
-}
-
-func findDownLeft(grid [][]rune, p point) bool {
-  var word []rune
-  for i := 0; i < len(`mas`) && p.y+i < len(grid) && p.x-i >= 0; i++ {
-    word = append(word, grid[p.y+i][p.x-i])
-  }
-  return string(word) == "MAS"
-}
-
 
