@@ -8,7 +8,19 @@ import (
 	"os"
 )
 
-const extraLogs = false
+const extraLogs = true
+
+const (
+  Up = 1 << iota
+  Down
+  Left
+  Right
+  
+  UpRight = Up | Right
+  UpLeft = Up | Left
+  DownRight = Down | Right
+  DownLeft = Down | Left
+)
 
 func init() {
   lvl := slog.LevelInfo
@@ -29,7 +41,6 @@ func main() {
 
   slog.Info("Parsing input as a grid")
   grid := gridify(in)
-  
 
   slog.Info("Counting words")
   
@@ -112,19 +123,19 @@ func (p point) Down() point {
 }
 
 func (p point) UpRight() point {
-  return point{y: p.y - 1, x: p.x + 1}
+  return p.Up().Right()
 }
 
 func (p point) UpLeft() point {
-  return point{y: p.y - 1, x: p.x - 1}
+  return p.Up().Left()
 }
 
 func (p point) DownRight() point {
-  return point{y: p.y + 1, x: p.x + 1}
+  return p.Down().Right()
 }
 
 func (p point) DownLeft() point {
-  return point{y: p.y + 1, x: p.x - 1}
+  return p.Down().Left()
 }
 
 // findNextStartingPoint returns the next possible starting point
@@ -154,7 +165,7 @@ func findNextStartingPoint(grid [][]rune, after *point) *point {
     }
     for j := xs; j < gw; j++ {
       r := grid[i][j]
-      if r == 'm' || r == 'M' {
+      if r == 'M' {
         return &point{y: i, x: j}
       }
     }
@@ -191,6 +202,9 @@ func findCentersOfMas(grid [][]rune, startingPoint point) ([]point, []point) {
   if findDownLeft(grid, startingPoint) {
     dcs = append(dcs, startingPoint.DownLeft())
   }
+  if n := len(hcs) + len(dcs); n != 0 {
+    slog.Debug("Found centers", "n", n)
+  }
   return hcs, dcs
 }
 
@@ -200,8 +214,7 @@ func findRight(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.x+i < w; i++ {
     word = append(word, grid[p.y][p.x+i])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findLeft(grid [][]rune, p point) bool {
@@ -209,8 +222,7 @@ func findLeft(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.x-i >= 0; i++ {
     word = append(word, grid[p.y][p.x-i])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findUp(grid [][]rune, p point) bool {
@@ -218,8 +230,7 @@ func findUp(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.y-i >= 0; i++ {
     word = append(word, grid[p.y-i][p.x])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findDown(grid [][]rune, p point) bool {
@@ -228,8 +239,7 @@ func findDown(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.y+i < h; i++ {
     word = append(word, grid[p.y+i][p.x])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findUpRight(grid [][]rune, p point) bool {
@@ -237,8 +247,7 @@ func findUpRight(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.y-i >= 0 && p.x+i < len(grid[0]); i++ {
     word = append(word, grid[p.y-i][p.x+i])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findUpLeft(grid [][]rune, p point) bool {
@@ -246,8 +255,7 @@ func findUpLeft(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.y-i >= 0 && p.x-i >= 0; i++ {
     word = append(word, grid[p.y-i][p.x-i])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findDownRight(grid [][]rune, p point) bool {
@@ -255,8 +263,7 @@ func findDownRight(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.y+i < len(grid) && p.x+i < len(grid[0]); i++ {
     word = append(word, grid[p.y+i][p.x+i])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 func findDownLeft(grid [][]rune, p point) bool {
@@ -264,8 +271,7 @@ func findDownLeft(grid [][]rune, p point) bool {
   for i := 0; i < len(`mas`) && p.y+i < len(grid) && p.x-i >= 0; i++ {
     word = append(word, grid[p.y+i][p.x-i])
   }
-  s := string(word)
-  return s == "mas" || s == "MAS"
+  return string(word) == "MAS"
 }
 
 
