@@ -148,25 +148,25 @@ func getWord(grid [][]rune, ps ...point) string {
 func findMatches(grid [][]rune, p point) int {
   matches := make([]Direction, 0)
   
-  // Check: L  => R
-  if getWord(grid, p.Left(), p, p.Right()) == "MAS" {
-    matches = append(matches, Left)
-  }
-
-  // Check: R  => L
-  if getWord(grid, p.Right(), p, p.Left()) == "MAS" {
-    matches = append(matches, Right)
-  }
-
-  // Check: U  => D
-  if getWord(grid, p.Up(), p, p.Down()) == "MAS" {
-    matches = append(matches, Up)
-  }
-
-  // Check: D  => U
-  if getWord(grid, p.Down(), p, p.Up()) == "MAS" {
-    matches = append(matches, Down)
-  }
+  // // Check: L  => R
+  // if getWord(grid, p.Left(), p, p.Right()) == "MAS" {
+  //   matches = append(matches, Left)
+  // }
+  //
+  // // Check: R  => L
+  // if getWord(grid, p.Right(), p, p.Left()) == "MAS" {
+  //   matches = append(matches, Right)
+  // }
+  //
+  // // Check: U  => D
+  // if getWord(grid, p.Up(), p, p.Down()) == "MAS" {
+  //   matches = append(matches, Up)
+  // }
+  //
+  // // Check: D  => U
+  // if getWord(grid, p.Down(), p, p.Up()) == "MAS" {
+  //   matches = append(matches, Down)
+  // }
 
   // Check: UL => DR
   if getWord(grid, p.UpLeft(), p, p.DownRight()) == "MAS" {
