@@ -17,11 +17,55 @@ func main() {
   h, w, g, obs := parseInput(in)
   slog.Info("Parsed", "height", h, "width", w, "guard", g, "obstacles", len(obs))
 
-  slog.Info("Walking guard")
-  spots := map[point]bool{
-    g: true,
+  slog.Info("Running guard's inital walkthrough")
+  _, spots, _ := walkTheGuard(g, obs, h, w)
+ 
+  slog.Info("Looking for obstacle positions to create loops")
+  var ls int
+  for p := range spots {
+    // Can't put an obstacle on the guard's 
+    // current position.
+    if p == g {
+      continue
+    }
+    // slog.Info("Checking obstacle", "spot", p)
+
+    // Add the spot to the list of obstacles
+    newObs := binaryInsert(obs, p)
+
+    // Run the guard's walkthrough with that new
+    // obstacle added to the list
+    _, _, loop := walkTheGuard(g, newObs, h, w)
+
+    // If the guard is in a loop, count it
+    if loop {
+      // slog.Info("Found loop", "spot", p)
+      ls++
+    }
   }
-  var d direction // Starts up
+  slog.Info("Done", "loopableSpots", ls)
+}
+
+func binaryInsert(ps []point, p point) []point {
+  // Copy the ps slice
+  p2 := make([]point, len(ps))
+  copy(p2, ps)
+
+  // Then find the insertion point (w/ binary search)
+  i, _ := slices.BinarySearchFunc(p2, p, comparePoint)
+
+  // Then insert into p2
+  p2 = slices.Insert(p2, i, p)
+
+  // Then return the copy
+  return p2
+}
+
+func walkTheGuard(g point, obs []point, h, w int) (point, map[point]direction, bool) {
+  d := Up // Starts up
+  spots := map[point]direction{
+    g: d,
+  }
   for {
     // slog.Info("Move", "guard", g, "direction", d)
 
@@ -55,27 +99,41 @@ func main() {
     // Is the guard out of bounds?
     // Then stop the loop
     if !inBounds(g, h, w) {
-      slog.Info("Guard out of bounds", "guard", g)
+      // slog.Info("Guard out of bounds", "guard", g)
+      break
+    }
+
+    // Is the guard in a spot it has already visited,
+    // moving in the same direction? (aka a loop)
+    if spots[g] & d != 0 {
+      // slog.Info("Guard in loop", "guard", g, "direction", d)
       break
     }
 
     // Otherwise, count the move and keep going
-    spots[g] = true
+    spots[g] |= d
   }
-  slog.Info("Done", "moves", len(spots))
+  loop := spots[g] & d != 0
+  return g, spots, loop
 }
 
 type direction int
 
 const (
-  Up direction = iota
+  Up direction = 1 << iota
   Right
   Down
   Left
 )
 
 func (d direction) turn() direction {
-  return (d + 1) % 4
+  switch d {
+  case Up, Right, Down:
+    return d << 1
+  case Left:
+    return Up
+  }
+  panic("unreachable")
 }
 
 func (d direction) String() string {
