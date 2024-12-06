@@ -23,33 +23,42 @@ func main() {
 
   slog.Info("Walking through the updates")
   var total int
-updateLoop:
   for _, up := range data.updates {
     // Test against the rules
-  ruleLoop:
+    var failed bool
     for _, r := range data.rules {
       // Unpack the rule
       rn1, rn2 := r[0], r[1]
 
-      // Does rn1 exist in the update?
+      // Do both rule parts exist in the update?
       i1 := slices.Index(up, rn1)
       i2 := slices.Index(up, rn2)
 
-      // Are they both in the update?
       // If not, skip this rule
       if i1 == -1 || i2 == -1 {
-        continue ruleLoop
+        continue
       }
 
-      // If rn2 comes after rn1, then we're good
+      // If rn2 comes after rn1, then the rule is followed
+      // ...which in this case we can ignore
       if i2 < i1 {
-        continue updateLoop
+        failed = true
+        break
       }
     }
 
-    // If the update passed all the rules, add
-    // the middle number to the total
-    total += getMiddleNumber(up)
+    // Didn't fail? Skip to the next update
+    if !failed {
+      continue
+    }
+
+    // If the update failed one or more rules...
+    // - Fix / reorder the update
+    // - Find the middle number
+    // - Add it to the total
+    u2 := reorderUpdate(up, data.rules)
+    // slog.Info("FTFY", "before", up, "after", u2)
+    total += getMiddleNumber(u2)
   }
   slog.Info("Done", "total", total)
 }
@@ -144,4 +153,106 @@ func parseUpdatesSection(lines []string) [][]int {
 func getMiddleNumber(ns []int) int {
   return ns[len(ns) / 2]
 }
+
+func reorderUpdate(up []int, rules [][2]int) []int {
+  // Create an update by sorting the rule numbers
+  //
+  // (Reminder that all numbers in the rules must be
+  // in the update - but not all numbers in the
+  // update must be in the rules)
+  matchingRules := filterRules(rules, up)
+  sorted := sortRuleNums(matchingRules)
+
+  // Now add in any numbers from the original update
+  // that aren't in the new, sorted update
+  sorted = addMissingNums(sorted, up)
+  return sorted
+}
+
+func filterRules(rules [][2]int, up []int) [][2]int {
+  // Determine which rules are used
+  useRule := make([]bool, len(rules))
+  for i, r := range rules {
+    n, m := r[0], r[1]
+    if slices.Index(up, n) != -1 && slices.Index(up, m) != -1 {
+      useRule[i] = true
+    }
+  }
+
+  // Filter the rules
+  var newRules [][2]int
+  for i, r := range rules {
+    if useRule[i] {
+      newRules = append(newRules, r)
+    }
+  }
+  return newRules
+}
+
+func insertAt(ns []int, i, n int) []int {
+  ns = append(ns, 0)
+  copy(ns[i+1:], ns[i:])
+  ns[i] = n
+  return ns
+}
+
+// sortRuleNums creates an update by sorting a list
+// of rule numbers -- where a rule [n1, n2] means that
+// n1 must come before n2 in the update.
+func sortRuleNums(rules [][2]int) []int {
+  // A graph of rule from-numbers to to-numbers
+  graph := make(map[int][]int)
+  for _, r := range rules {
+    n1, n2 := r[0], r[1]
+    graph[n1] = append(graph[n1], n2)
+  }
+
+  // Sort the graph
+  var sorted []int // The sorted update list
+  for len(graph) > 0 {
+    n := findNodeWithZeroIns(graph)
+    if n == -1 {
+      panic("No node with zero ins found")
+    }
+    sorted = append(sorted, n)
+    delete(graph, n)
+  }
+ 
+  // Return the sorted list
+  return sorted
+}
+
+func reverseGraph(g map[int][]int) map[int][]int {
+  rg := make(map[int][]int)
+  for nf, nts := range g {
+    for _, n := range nts {
+      rg[n] = append(rg[n], nf)
+    }
+  }
+  return rg
+}
+
+func findNodeWithZeroIns(g map[int][]int) int {
+  rg := reverseGraph(g)
+  for k := range g {
+    if _, ok := rg[k]; !ok {
+      return k
+    }
+  }
+  return -1
+}
+
+func addMissingNums(some, all []int) []int {
+  full := make([]int, 0, len(all))
+  for _, n := range some {
+    full = append(full, n)
+  }
+  for _, n := range all {
+    if slices.Index(full, n) == -1 {
+      full = append(full, n)
+    }
+  }
+  return full
+}
+
 
