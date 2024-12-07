@@ -18,6 +18,7 @@ func main() {
   var total int
   for _, eq := range eqs {
     if test(eq) {
+      // slog.Info("Found", "result", eq.result)
       total += eq.result
     }
   }
@@ -84,19 +85,35 @@ func _test(target, current int, rest []int) bool {
   }
 
   // Try multiplying
-  return _test(target, current * next, rest)
+  if _test(target, current * next, rest) {
+    return true
+  }
+
+  // Try concatenating
+  n := concat(current, next)
+  return _test(target, n, rest)
 }
 
+func concat(a, b int) int {
+  return a * pow10(digitCount(b)) + b
+}
 
+func digitCount(n int) int {
+  var count int
+  for n > 0 {
+    n /= 10
+    count++
+  }
+  return count
+}
 
-
-
-
-
-
-
-
-
+func pow10(exp int) int {
+  result := 1
+  for i := 0; i < exp; i++ {
+    result *= 10
+  }
+  return result
+}
 
 
 
