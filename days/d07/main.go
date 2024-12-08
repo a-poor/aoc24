@@ -62,7 +62,7 @@ func test(eq equation) bool {
 
 func _test(target, current int, rest []int) bool {
 	// Exactly right?
-	if target == current {
+	if target == current && len(rest) == 0 {
 		return true
 	}
 
