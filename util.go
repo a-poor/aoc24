@@ -6,10 +6,10 @@ import (
 )
 
 func GetInput(d uint8, test bool) []byte {
-  var sfx string 
-  if test {
-    sfx = ".test"
-  }
+	var sfx string
+	if test {
+		sfx = ".test"
+	}
 	fn := fmt.Sprintf("./inputs/d%02d%s.txt", d, sfx)
 	b, err := os.ReadFile(fn)
 	if err != nil {
