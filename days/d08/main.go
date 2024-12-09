@@ -29,27 +29,15 @@ func main() {
 
       // Look through the antennas
       for ai, a1 := range as {
-        // How far is it from the current position
-        // to this antenna?
-        distFromPToA1 := p.diff(a1.p)
-
         // Now look through the remaining antennas
         for _, a2 := range as[ai+1:] {
           // If it isn't the same type, skip it
           if a1.r != a2.r {
             continue
           }
-
-          // How far is it from the current position?
-          distFromPToA2 := p.diff(a2.p)
-
-          // Get the doubled positions
-          doublePToA1 := distFromPToA1.mul(2)
-          doublePToA2 := distFromPToA2.mul(2)
-
-          // If the distance isn't either double or
-          // half, then skip it
-          if !(distFromPToA1 == doublePToA2 || doublePToA1 == distFromPToA2) {
+         
+          // If the antennas are the same, skip it
+          if !areCollinear(p, a1.p, a2.p) {
             continue
           }
 
@@ -89,6 +77,23 @@ func (p point) mul(n int) point {
     x: p.x * n,
     y: p.y * n,
   }
+}
+
+func (p point) tof() fpoint {
+  return fpoint{
+    x: float64(p.x),
+    y: float64(p.y),
+  }
+}
+
+type fpoint struct {
+  x, y float64
+}
+
+func areCollinear(a, b, c point) bool {
+  af, bf, cf := a.tof(), b.tof(), c.tof()
+  area := af.x * (bf.y - cf.y) + bf.x * (cf.y - af.y) + cf.x * (af.y - bf.y)
+  return area == 0
 }
 
 func parseInput(in []byte) (int, int, []antenna) {
